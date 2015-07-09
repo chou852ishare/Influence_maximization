@@ -9,7 +9,7 @@ import sys
 # parameters
 # constants
 T   = 10      # time horizon
-S   = 1       # |seed set|
+S   = 10      # |seed set|
 M   = 100     # big M
 UB  = 100     # upper bound of variables
 # network parameters - set_network()
@@ -29,12 +29,12 @@ ind1        = []
 val         = []
 
 
-def set_network():
+def set_network(size, source, target, weight):
     global N
-    N = 60      # number of nodes in network
-    w_to.extend(range(1, N))
-    w_fr.extend(range(0, N-1))
-    w_val.extend([-0.8] * (N-1))
+    N = size      # number of nodes in network
+    w_to.extend(target)
+    w_fr.extend(source)
+    w_val.extend(map(lambda x: -x, weight))
 
 
 def set_coefficients():
@@ -73,7 +73,6 @@ def set_constraint_matrix():
     ind0.extend([2*N*T] * N)
     ind1.extend(range(N))
     val.extend([1] * N)
-    print len(ind0), len(ind1), len(val)
 
 
 def populatebynonzero(prob):
@@ -87,8 +86,9 @@ def populatebynonzero(prob):
     prob.linear_constraints.set_coefficients(zip(ind0, ind1, val))
 
 
-def optimize():
-    set_network()
+def optimize(size, source, target, weight):
+    print '************* start optimizing *********************'
+    set_network(size, source, target, weight)
     set_coefficients()
     set_constraint_matrix()
     try:
@@ -99,6 +99,7 @@ def optimize():
         print exc
         return
     print
+    print '**********************************'
     # solution.get_status() returns an integer code
     print "Solution status = " , im_prob.solution.get_status(), ":",
     # the following line prints the corresponding string
@@ -110,5 +111,9 @@ def optimize():
 
 
 if __name__ == "__main__":
-    optimize()
+    size    = 60
+    source  = [0] * (size-1)
+    target  = range(1,size)
+    weight  = [0.8] * (size-1)
+    optimize(size, source, target, weight)
 

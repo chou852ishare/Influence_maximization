@@ -5,7 +5,11 @@ def read_graph(gfile):
     print '**********************************'
     graph = Graph.Read_GraphML(gfile)
     print summary(graph)
-    print 'The graph is directed:', graph.is_directed()
+    ISDIR = graph.is_directed()
+    print 'The graph is directed:', ISDIR
+    if not ISDIR:
+        graph = graph.as_directed()
+    print 'The graph is directed (after as_directed()):', graph.is_directed()
     return graph
 
 
@@ -38,12 +42,12 @@ def normalize_inweight(graph):
 
 
 def preprocess(fname):
-    path = './data/sampson-GraphML/'
+    path = './data'
     gfile = path + fname
     g = read_graph(gfile)
     break_cycle(g)
     normalize_inweight(g)
-    return [e.source for e in g.es], [e.target for e in g.es], [w for w in g.es['normalized inweight']]
+    return len(g.vs), [e.source for e in g.es], [e.target for e in g.es], [w for w in g.es['normalized inweight']]
 
 
 def main():
