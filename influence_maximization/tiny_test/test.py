@@ -3,6 +3,7 @@ import cplex
 import read_graphml
 import cplex_tiny
 import bendersIM
+import calculate_LT
 
 
 # paramters of IM
@@ -54,3 +55,10 @@ for v in g.vs:
 node_sumw.sort(reverse_comp)
 for i in xrange(5):
     print node_sumw[i]
+
+
+# calculate expected spread 
+seedSet = [2, 5, 6]
+calculate_LT.run(seedSet, S, T, size, source, target, weight)
+seedSet = [0, 1, 6]
+calculate_LT.run(seedSet, S, T, size, source, target, weight)

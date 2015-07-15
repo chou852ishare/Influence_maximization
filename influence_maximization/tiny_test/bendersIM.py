@@ -82,14 +82,13 @@ class BendersLazyConsCallback(LazyConstraintCallback):
         x1       = self.x1
         z        = self.z
         workerLP = self.workerLP
-        print 'lazy constraint, len(y):', len(y)
-        print 'lazy constraint, len(x1):', len(x1)
-        print 'lazy constraint, len(z):', len(z)
 
         # Get the current y, x1 and z solution
         ySol    = self.get_values(y)
         x1Sol   = self.get_values(x1) 
         zSol    = self.get_values(z)
+        print 'lazy constraint, y =', filter(lambda yi: yi[1] > 1e-03, enumerate(ySol))
+        print 'lazy constraint, z =', zSol
          
         # Benders' cut separation
         if workerLP.separate(ySol, y, x1Sol, x1, zSol, z):
