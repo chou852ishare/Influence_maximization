@@ -11,6 +11,12 @@ S = 3
 T = 10
 
 
+
+# paramters of IM
+S = 3
+T = 10
+
+
 fname = '/bkfrat-GraphML/BKFRAB.GraphML' # 'SAMPIN.GraphML'
 # get directed weighted network
 g = read_graphml.preprocess(fname)

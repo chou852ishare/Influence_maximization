@@ -82,6 +82,12 @@ class BendersLazyConsCallback(LazyConstraintCallback):
         x1       = self.x1
         z        = self.z
         workerLP = self.workerLP
+<<<<<<< HEAD
+=======
+        print 'lazy constraint, len(y):', len(y)
+        print 'lazy constraint, len(x1):', len(x1)
+        print 'lazy constraint, len(z):', len(z)
+>>>>>>> ceee6a9d2fa75ac78490a51751ac03f7913cb576
 
         # Get the current y, x1 and z solution
         ySol    = self.get_values(y)
