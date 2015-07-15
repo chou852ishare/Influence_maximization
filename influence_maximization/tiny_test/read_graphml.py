@@ -47,7 +47,7 @@ def preprocess(fname):
     g = read_graph(gfile)
     break_cycle(g)
     normalize_inweight(g)
-    return len(g.vs), [e.source for e in g.es], [e.target for e in g.es], [w for w in g.es['normalized inweight']]
+    return g
 
 
 def main():

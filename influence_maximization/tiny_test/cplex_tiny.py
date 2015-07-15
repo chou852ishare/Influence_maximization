@@ -9,7 +9,7 @@ import sys
 # parameters
 # constants
 T   = 10      # time horizon
-S   = 10      # |seed set|
+S   = 3       # |seed set|
 M   = 100     # big M
 UB  = 100     # upper bound of variables
 # network parameters - set_network()
@@ -87,7 +87,8 @@ def populatebynonzero(prob):
 
 
 def optimize(size, source, target, weight):
-    print '************* start optimizing *********************'
+    print '******************************************************************************************'
+    print 'Solve the original MIP directly'
     set_network(size, source, target, weight)
     set_coefficients()
     set_constraint_matrix()
