@@ -4,6 +4,12 @@ import read_graphml
 import cplex_tiny
 import bendersIM
 
+
+# paramters of IM
+S = 3
+T = 10
+
+
 fname = '/bkfrat-GraphML/BKFRAB.GraphML' # 'SAMPIN.GraphML'
 # get directed weighted network
 g = read_graphml.preprocess(fname)
@@ -12,7 +18,7 @@ print 'g is a DAG:', g.is_dag()
 
 # influence maximization - original
 size, source, target, weight = len(g.vs), [e.source for e in g.es], [e.target for e in g.es], [w for w in g.es['normalized inweight']]
-cplex_tiny.optimize(size, source, target, weight)
+cplex_tiny.optimize(S, T, size, source, target, weight)
 
 
 # influence maximization - benders decomposition
@@ -22,11 +28,13 @@ cplex_tiny.optimize(size, source, target, weight)
 # 1     [(2,0.2) (6,0.2) (8,0.1) ...]
 # 2     [(1,0.3) (3,0.4) ...]
 # ...
-inweights = []
+inweights   = []
+outweights  = []
 for v in g.vs:
     inweights.append([(e.source, e['normalized inweight']) for e in g.es(_target = v.index)])
-separate = 0
-bendersIM.optimize(separate, inweights)
+    outweights.append([(e.target, e['normalized inweight']) for e in g.es(_source = v.index)])
+sepflag = 0
+bendersIM.optimize(S, T, sepflag, inweights, outweights)
 
 
 # double check
