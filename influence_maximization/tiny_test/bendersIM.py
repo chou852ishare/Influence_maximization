@@ -77,19 +77,22 @@ from cplex.exceptions import CplexError
 # 
 class BendersLazyConsCallback(LazyConstraintCallback):
         
-    def __call__(self):    
+    def __call__(self):   
+        y        = self.y
         x1       = self.x1
         z        = self.z
         workerLP = self.workerLP
+        print 'lazy constraint, len(y):', len(y)
         print 'lazy constraint, len(x1):', len(x1)
         print 'lazy constraint, len(z):', len(z)
 
-        # Get the current x1 and z solution
+        # Get the current y, x1 and z solution
+        ySol    = self.get_values(y)
         x1Sol   = self.get_values(x1) 
         zSol    = self.get_values(z)
          
         # Benders' cut separation
-        if workerLP.separate(xSol, x, zSol, z):
+        if workerLP.separate(ySol, y, x1Sol, x1, zSol, z):
             self.add(constraint = workerLP.cutLhs, sense = "L", rhs = workerLP.cutRhs)
 
 
@@ -99,9 +102,11 @@ class BendersLazyConsCallback(LazyConstraintCallback):
 class BendersUserCutCallback(UserCutCallback):
         
     def __call__(self):  
+        y        = self.y
         x1       = self.x1
         z        = self.z
         workerLP = self.workerLP
+        print 'user cut, len(y):', len(y)
         print 'user cut, len(x1):', len(x1)
         print 'user cut, len(z):', len(z)
 
@@ -109,12 +114,13 @@ class BendersUserCutCallback(UserCutCallback):
         if self.is_after_cut_loop() == False:
             return
   
-        # Get the current x1 and z solution
+        # Get the current y, x1 and z solution
+        ySol    = self.get_values(y)
         x1Sol   = self.get_values(x1) 
         zSol    = self.get_values(z)
         
         # Benders' cut separation
-        if workerLP.separate(x1Sol, x1, zSol, z):
+        if workerLP.separate(ySol, y, x1Sol, x1, zSol, z):
             self.add(cut = workerLP.cutLhs, sense = "L", rhs = workerLP.cutRhs)
       
 
@@ -141,7 +147,12 @@ class WorkerLP:
     # for i,t in V*range(2,T+1):
     #                x(i,t) <= 0                                    (11)
     #
-    def __init__(self, inweights): 
+    def __init__(self, inweights, outweights, T): 
+        
+        # parameters
+        numNodes        = len(inweights)
+        obj_subprob_xt  = [1] * ((T-1)*numNodes)
+        ub_xt           = [1] * ((T-1)*numNodes)
 
         # Set up Cplex instance to solve the worker LP
         cpx = cplex.Cplex()
@@ -155,62 +166,78 @@ class WorkerLP:
         
         cpx.objective.set_sense(cpx.objective.sense.maximize)
         
-        # Create variables and populate constraints by nonzeros
+        # Create variables 
+        # constraints are coupled with x1 and S, defined in separate()
         cpx.variables.add(obj = obj_subprob_xt, ub = ub_xt)
-        cpx.linear_constraints.set_coefficients(coefficients)
-        cpx.linear_constraints.set_senses(senses_subprob)
-        # linear_constraints.rhs are determined by x1
-        # cpx.linear_constraints.set_rhs() is defined in separate
                                                    
-        self.cpx      = cpx
-      
+        self.cpx        = cpx
+        self.T          = T
+        self.numNodes   = numNodes
+        self.inweights  = inweights
+        self.outweights = outweights
+
     # This method separates Benders' cuts violated by the current z (and x1) solution.
     # Violated cuts are found by solving the worker LP
     #
-    def separate(self, xSol, x): 
+    def separate(self, ySol, y, x1Sol, x1, zSol, z): 
         cpx              = self.cpx
+        T                = self.T
+        numNodes         = self.numNodes
+        inweights        = self.inweights
+        outweights       = self.outweights
         violatedCutFound = False
-                
-        # Update the rhs of constraints in the worker LP
-        cpx.linear_constraints.set_rhs(rhs_subprob)
+        
+        # parameters
+        seed_set        = map(lambda yi: yi[0], filter(lambda yi: yi[1] > 1e-03, enumerate(ySol)))
+        S               = len(seed_set)
+        senses_subprob  = 'L' * (numNodes + (T-2)*numNodes + (T-1)*S)
+        rhs9            = [sum([nw[1] * x1Sol[nw[0]] for nw in inweights[i]]) for i in xrange(numNodes)]
+        rhs10           = [0] * ((T-2)*numNodes)          # rhs of c(10)
+        rhs11           = [0] * ((T-1)*S)                 # rhs of c(11)
+        rhs_subprob     = rhs9 + rhs10 + rhs11            # rhs of constraints
+        # coefficients
+        coefficients9   = map(lambda i: (i, i, 1), xrange(numNodes))
+        # c(10)
+        coefficients10  = []
+        for t in xrange(3, T+1):
+            for i in xrange(numNodes):
+                coefficients10.extend(map(lambda j_wji: ((t-2)*numNodes + i, (t-3)*numNodes + j_wji[0], -j_wji[1]), inweights[i]))
+                coefficients10.extend([((t-2)*numNodes + i, (t-2)*numNodes + i, 1)])
+        # c(11)
+        coefficients11  = []
+        for t in xrange(2, T+1):
+            coefficients11.extend(map(lambda si_i: ((T-1)*numNodes +(t-2)*S + si_i[0], (t-2)*numNodes + si_i[1], 1), enumerate(seed_set)))
+        # all coefficients
+        coefficients    = coefficients9 + coefficients10 + coefficients11
+
+        # Update constraints in the worker LP
+        cpx.linear_constraints.add(senses = senses_subprob, rhs = rhs_subprob)
+        cpx.linear_constraints.set_coefficients(coefficients)
       
         # Solve the worker LP
         cpx.solve()
       
-        # A violated cut is available iff the solution status is unbounded     
-        if cpx.solution.get_status() == cpx.solution.status.unbounded:
-      
-            # Get the violated cut as an unbounded ray of the worker LP
-            ray = cpx.solution.advanced.get_ray()
-           
-            # Compute the cut from the unbounded ray. The cut is:
-            # sum((i,j) in A) (sum(k in V0) v(k,i,j)) * x(i,j) >=
-            # sum(k in V0) u(k,0) - u(k,k)
-            numArcs = numNodes*numNodes
-            cutVarsList  = []
+        # A violated cut is available iff the optimal value is less than zSol
+        print 'subproblem solution status,', cpx.solution.get_status()
+        if cpx.solution.get_objective_value() < zSol[0]:
+            print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+            print 'found violated! zSol:', zSol[0], '> optimal_value:', cpx.solution.get_objective_value()
+        
+            # create violated cut with dual variables
+            # violated cut:
+            # -sum(j in V) (sum(i in V) u(i) * w(j,i)) * x1(j) + z <= 0
+            # where u is dual variables
+            u = cpx.solution.get_dual_values(range(numNodes))
             cutCoefsList = []
-            for i in range(numNodes):
-                for j in range(numNodes):
-                    thecoef = 0.0
-                    for k in range(1, numNodes):
-                        v_k_i_j_index = (k-1)*numArcs + i*numNodes + j
-                        if ray[v_k_i_j_index] > 1e-03:
-                            thecoef = thecoef + ray[v_k_i_j_index]
-                    if thecoef > 1e-03:
-                        cutVarsList.append(x[i][j]) 
-                        cutCoefsList.append(thecoef)
+            for j in xrange(numNodes):
+                suw = sum(map(lambda iw: u[iw[0]] * iw[1], outweights[j]))
+                cutCoefsList.append(-suw)
+            cutVarsList = x1 + z
+            cutCoefsList.append(1)
+            
             cutLhs = cplex.SparsePair(ind = cutVarsList, val = cutCoefsList)
-            
-            vNumVars = (numNodes-1)*numArcs
             cutRhs = 0.0
-            for k in range(1, numNodes):
-                u_k_0_index = vNumVars + (k-1)*numNodes
-                if fabs(ray[u_k_0_index]) > 1e-03:
-                    cutRhs = cutRhs + ray[u_k_0_index]
-                u_k_k_index = vNumVars + (k-1)*numNodes + k
-                if fabs(ray[u_k_k_index]) > 1e-03:
-                    cutRhs = cutRhs - ray[u_k_k_index]
-            
+
             self.cutLhs = cutLhs
             self.cutRhs = cutRhs
             violatedCutFound = True
@@ -242,7 +269,7 @@ class WorkerLP:
 #                                             z <= N        (5)
 # forall i in V:                           y(i) in {0, 1}   (6)
 #
-def createMasterILP(cpx, S, x1, z, inweights):
+def createMasterILP(cpx, S, y, x1, z, inweights):
     # number of nodes
     numNodes = len(inweights)
     
@@ -255,7 +282,8 @@ def createMasterILP(cpx, S, x1, z, inweights):
     ub_z            = [numNodes]
     master_sense    = 'L' * (1 + numNodes + numNodes)
     master_rhs      = [S] + [M]*numNodes + [0]*numNodes
-    # indices of coupled variables x1 (and z)
+    # indices of coupled variables
+    y.extend(range(numNodes))
     x1.extend(range(numNodes, 2*numNodes))
     z.extend([2*numNodes])
 
@@ -289,7 +317,7 @@ def createMasterILP(cpx, S, x1, z, inweights):
     cpx.linear_constraints.set_coefficients(coefficients)
 
 
-def optimize(sepFracSols, inweights):
+def optimize(S, T, sepFracSols, inweights, outweights):
     print '*****************************************************************************************'
     print 'Solve the MIP problem using Benders Decomposition'
     try:
@@ -300,14 +328,15 @@ def optimize(sepFracSols, inweights):
             print "Only integer infeasible solutions."
 
         # Create master ILP
-        S   = 3
-        x1  = []    # x1 (and z) couples master and subproblem
+        numNodes = len(inweights)
+        y   = []
+        x1  = []    
         z   = []
         cpx = cplex.Cplex()
-        createMasterILP(cpx, S, x1, z, inweights)
+        createMasterILP(cpx, S, y, x1, z, inweights)
 
         # Create workerLP for Benders' cuts separation 
-        workerLP = WorkerLP(inweights);
+        workerLP = WorkerLP(inweights, outweights, T);
 
         # Set up cplex parameters to use the cut callback for separating Benders' cuts
         cpx.parameters.preprocessing.presolve.set(cpx.parameters.preprocessing.presolve.values.off) 
@@ -325,11 +354,13 @@ def optimize(sepFracSols, inweights):
         cpx.parameters.mip.strategy.search.set(cpx.parameters.mip.strategy.search.values.traditional)
         
         lazyBenders     = cpx.register_callback(BendersLazyConsCallback) 
+        lazyBenders.y   = y
         lazyBenders.x1  = x1
         lazyBenders.z   = z
         lazyBenders.workerLP = workerLP 
         if sepFracSols == "1":
             userBenders     = cpx.register_callback(BendersUserCutCallback) 
+            userBenders.y   = y
             userBenders.x1  = x1
             userBenders.z   = z
             userBenders.workerLP = workerLP 

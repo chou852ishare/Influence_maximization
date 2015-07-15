@@ -29,6 +29,12 @@ ind1        = []
 val         = []
 
 
+def set_ST(s, t):
+    global S, T
+    S = s
+    T = t
+
+
 def set_network(size, source, target, weight):
     global N
     N = size      # number of nodes in network
@@ -86,9 +92,10 @@ def populatebynonzero(prob):
     prob.linear_constraints.set_coefficients(zip(ind0, ind1, val))
 
 
-def optimize(size, source, target, weight):
+def optimize(S, T, size, source, target, weight):
     print '******************************************************************************************'
     print 'Solve the original MIP directly'
+    set_ST(S, T)
     set_network(size, source, target, weight)
     set_coefficients()
     set_constraint_matrix()
