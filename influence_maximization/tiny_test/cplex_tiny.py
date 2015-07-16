@@ -115,7 +115,14 @@ def optimize(S, T, size, source, target, weight):
     print "Solution value  = ", im_prob.solution.get_objective_value()
     x     = im_prob.solution.get_values()
     x     = np.reshape(x, (T+1, N))
-    print "Solution variables = ", x
+    #print "Solution variables = ", x
+    seedSet = []
+    for i in range(size):
+        sol = im_prob.solution.get_values(i)
+        if sol > 1e-03:
+            print i, sol 
+            seedSet.append(i)
+    return seedSet
 
 
 if __name__ == "__main__":

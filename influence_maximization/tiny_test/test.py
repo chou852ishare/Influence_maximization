@@ -1,3 +1,5 @@
+import numpy as np
+import cPickle as pickle
 import igraph
 import cplex
 import read_graphml
@@ -7,13 +9,7 @@ import calculate_LT
 
 
 # paramters of IM
-S = 3
-T = 10
-
-
-
-# paramters of IM
-S = 3
+S = 5
 T = 10
 
 
@@ -25,7 +21,7 @@ print 'g is a DAG:', g.is_dag()
 
 # influence maximization - original
 size, source, target, weight = len(g.vs), [e.source for e in g.es], [e.target for e in g.es], [w for w in g.es['normalized inweight']]
-cplex_tiny.optimize(S, T, size, source, target, weight)
+ssCplex = cplex_tiny.optimize(S, T, size, source, target, weight)
 
 
 # influence maximization - benders decomposition
@@ -41,7 +37,7 @@ for v in g.vs:
     inweights.append([(e.source, e['normalized inweight']) for e in g.es(_target = v.index)])
     outweights.append([(e.target, e['normalized inweight']) for e in g.es(_source = v.index)])
 sepflag = 0
-bendersIM.optimize(S, T, sepflag, inweights, outweights)
+ssBenders = bendersIM.optimize(S, T, sepflag, inweights, outweights)
 
 
 # double check
@@ -64,7 +60,7 @@ for i in xrange(5):
 
 
 # calculate expected spread 
-seedSet = [2, 5, 6]
+seedSet = ssBenders 
 calculate_LT.run(seedSet, S, T, size, source, target, weight)
-seedSet = [0, 1, 6]
+seedSet = ssCplex
 calculate_LT.run(seedSet, S, T, size, source, target, weight)

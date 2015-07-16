@@ -8,8 +8,8 @@ import sys
 
 # parameters
 # constants
-T   = 10      # time horizon
-S   = 3       # |seed set|
+T   = 0       # time horizon
+S   = 0       # |seed set|
 M   = 100     # big M
 UB  = 100     # upper bound of variables
 # network parameters - set_network()
