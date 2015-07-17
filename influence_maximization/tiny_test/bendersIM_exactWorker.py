@@ -97,8 +97,8 @@ class BendersLazyConsCallback(LazyConstraintCallback):
             self.add(constraint = workerLP.cutLhs, sense = "L", rhs = workerLP.cutRhs)
             # force to a fixed solution
             #rows = [[[0], [1]],[[1], [1]], [[6], [1]]]
-            self.add(constraint = cplex.SparsePair(ind = [0], val = [1]), sense = 'E', rhs = 1.0)
-            self.add(constraint = cplex.SparsePair(ind = [1], val = [1]), sense = 'E', rhs = 1.0)
+            #self.add(constraint = cplex.SparsePair(ind = [0], val = [1]), sense = 'E', rhs = 1.0)
+            #self.add(constraint = cplex.SparsePair(ind = [1], val = [1]), sense = 'E', rhs = 1.0)
             #self.add(constraint = cplex.SparsePair(ind = [6], val = [1]), sense = 'E', rhs = 1.0)
         print 'Left lazy constraint callback'
 
@@ -199,11 +199,11 @@ class WorkerLP:
         # parameters
         seed_set        = map(lambda yi: yi[0], filter(lambda yi: yi[1] > 1e-03, enumerate(ySol)))
         S               = len(seed_set)
-        senses_subprob  = 'L' * (numNodes + (T-2)*numNodes + (T-1)*S)
+        senses_subprob  = 'L' * (numNodes + (T-2)*numNodes + (T-1)*numNodes)
         rhs9            = [sum([nw[1] * x1Sol[nw[0]] for nw in inweights[i]]) for i in xrange(numNodes)]
-        rhs10           = [0] * ((T-2)*numNodes)          # rhs of c(10)
-        rhs11           = [0] * ((T-1)*S)                 # rhs of c(11)
-        rhs_subprob     = rhs9 + rhs10 + rhs11            # rhs of constraints
+        rhs10           = [0] * ((T-2)*numNodes)            # rhs of c(10)
+        rhs11           = map(lambda yi: 1-yi, ySol) * (T-1) # rhs of c(11)
+        rhs_subprob     = rhs9 + rhs10 + rhs11              # rhs of constraints
         # coefficients
         coefficients9   = map(lambda i: (i, i, 1), xrange(numNodes))
         # c(10)
@@ -215,7 +215,7 @@ class WorkerLP:
         # c(11)
         coefficients11  = []
         for t in xrange(2, T+1):
-            coefficients11.extend(map(lambda si_i: ((T-1)*numNodes +(t-2)*S + si_i[0], (t-2)*numNodes + si_i[1], 1), enumerate(seed_set)))
+            coefficients11.extend(map(lambda i: ((T-1)*numNodes + (t-2)*numNodes + i, (t-2)*numNodes + i, 1), xrange(numNodes)))
         # all coefficients
         coefficients    = coefficients9 + coefficients10 + coefficients11
 
@@ -237,21 +237,26 @@ class WorkerLP:
 
             # create violated cut with dual variables
             # violated cut:
-            # -sum(j in V) (sum(i in V) u(i) * w(j,i)) * x1(j) + z <= 0
+            # sum(i in V)(sum(t>=2) u(i,t)) * y(i) 
+            #   - sum(j in V) (sum(i in V) u(i)*w(j,i)) * x1(j) 
+            #   + z <= 0
             # where u is dual variables
             u = cpx.solution.get_dual_values(range(numNodes))
+            cutVarsList = y + x1 + z
             cutCoefsList = []
+            # coefficients for y
+            su = map(lambda i: sum(u[(T-1)*numNodes+i::numNodes]), xrange(numNodes))
+            cutCoefsList.extend(su)
+            # coefficients for x1
             for j in xrange(numNodes):
                 suw = sum(map(lambda iw: u[iw[0]] * iw[1], outweights[j]))
                 cutCoefsList.append(-suw)
-            cutVarsList = x1 + z
+            # coefficients for z
             cutCoefsList.append(1)
             
-            cutLhs = cplex.SparsePair(ind = cutVarsList, val = cutCoefsList)
-            cutRhs = 0.0
+            self.cutLhs = cplex.SparsePair(ind = cutVarsList, val = cutCoefsList)
+            self.cutRhs = sum(su)
 
-            self.cutLhs = cutLhs
-            self.cutRhs = cutRhs
             violatedCutFound = True
 
         return violatedCutFound
@@ -334,7 +339,7 @@ def createMasterILP(cpx, S, y, x1, z, inweights):
 
 def optimize(S, T, sepFracSols, inweights, outweights):
     print '*****************************************************************************************'
-    print 'Solve the MIP problem using Benders Decomposition'
+    print 'Solve the MIP problem using Benders Decomposition with EXACT workerLP'
     try:
         print "Benders' cuts separated to cut off: " , 
         if sepFracSols == 1:
@@ -412,7 +417,7 @@ def optimize(S, T, sepFracSols, inweights, outweights):
         # may not correspond to the optimal master solution
         workerLP.separate(ySol, y, x1Sol, x1, zSol, z)
         print 'Objective value of workerLP: ', workerLP.cpx.solution.get_objective_value()
-        print "Influence maximization with Benders' Decomposition:"
+        print "Influence maximization with Benders' Decomposition with EXACT workerLP:"
         print 'Expected spread = ', solution.get_objective_value() + workerLP.cpx.solution.get_objective_value() - zSol[0]
     else:
         print "Solution status is not optimal"

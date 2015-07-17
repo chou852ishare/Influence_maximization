@@ -116,12 +116,13 @@ def optimize(S, T, size, source, target, weight):
     x     = im_prob.solution.get_values()
     x     = np.reshape(x, (T+1, N))
     #print "Solution variables = ", x
+    print reduce(lambda x1, x2: x1+x2, x)
     seedSet = []
-    for i in range(size):
-        sol = im_prob.solution.get_values(i)
+    for i,sol in enumerate(x[0]):
         if sol > 1e-03:
             print i, sol 
             seedSet.append(i)
+    
     return seedSet
 
 
