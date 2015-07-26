@@ -10,7 +10,7 @@ import calculate_LT
 
 
 # paramters of IM
-S = 20
+S = 2
 T = 10
 
 
@@ -22,7 +22,7 @@ print 'g is a DAG:', g.is_dag()
 
 # influence maximization - original
 size, source, target, weight = len(g.vs), [e.source for e in g.es], [e.target for e in g.es], [w for w in g.es['normalized inweight']]
-#ssCplex = cplex_tiny.optimize(S, T, size, source, target, weight)
+ssCplex = cplex_tiny.optimize(S, T, size, source, target, weight)
 
 
 # influence maximization - benders decomposition
@@ -38,13 +38,13 @@ for v in g.vs:
     inweights.append([(e.source, e['normalized inweight']) for e in g.es(_target = v.index)])
     outweights.append([(e.target, e['normalized inweight']) for e in g.es(_source = v.index)])
 sepflag = 0
-ssBenders = bendersIM.optimize(S, T, sepflag, inweights, outweights)
+sBenders = bendersIM.optimize(S, T, sepflag, inweights, outweights)
 
 
 # influence maximization - benders decomposition
 # using exact workerLP form
-#sepflag = 0
-#ssBenders = bendersIM_exactWorker.optimize(S, T, sepflag, inweights, outweights)
+sepflag = 0
+ssBenders = bendersIM_exactWorker.optimize(S, T, sepflag, inweights, outweights)
 
 
 # double check
@@ -67,7 +67,12 @@ for i in xrange(5):
 
 
 # calculate expected spread 
-seedSet = ssBenders 
-calculate_LT.run(seedSet, S, T, size, source, target, weight)
 seedSet = ssCplex
 calculate_LT.run(seedSet, S, T, size, source, target, weight)
+print 'seed set selected by Cplex'
+seedSet = sBenders 
+calculate_LT.run(seedSet, S, T, size, source, target, weight)
+print 'seed set selected by imcomplete Benders'
+seedSet = ssCplex
+calculate_LT.run(seedSet, S, T, size, source, target, weight)
+print 'seed set selected by EXACT Benders'

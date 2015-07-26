@@ -87,20 +87,14 @@ class BendersLazyConsCallback(LazyConstraintCallback):
         x1Sol   = self.get_values(x1) 
         zSol    = self.get_values(z)
         print 'Enter lazy constraint callback'
-        print 'lazy constraint, y =', filter(lambda yi: yi[1] > 1e-03, enumerate(ySol))
-        print 'lazy constraint, sum(x1) =', sum(x1Sol)
-        print 'lazy constraint, z =', zSol
-        print 'lazy constraint, sum(y,x1,z) =', sum(ySol)+sum(x1Sol)+sum(zSol)
-         
+        print 'Objective value =', self.get_objective_value() 
+        print 'Best objective value =', self.get_best_objective_value() 
+        print 'Incumbent objective value =', self.get_incumbent_objective_value() 
         # Benders' cut separation
         if workerLP.separate(ySol, y, x1Sol, x1, zSol, z):
             self.add(constraint = workerLP.cutLhs, sense = "L", rhs = workerLP.cutRhs)
-            # force to a fixed solution
-            #rows = [[[0], [1]],[[1], [1]], [[6], [1]]]
-            #self.add(constraint = cplex.SparsePair(ind = [0], val = [1]), sense = 'E', rhs = 1.0)
-            #self.add(constraint = cplex.SparsePair(ind = [1], val = [1]), sense = 'E', rhs = 1.0)
-            #self.add(constraint = cplex.SparsePair(ind = [6], val = [1]), sense = 'E', rhs = 1.0)
         print 'Left lazy constraint callback'
+        print '#############################'
 
 
 # The class BendersUserCutCallback 
@@ -181,6 +175,7 @@ class WorkerLP:
                                                    
         self.cpx        = cpx
         self.T          = T
+        self.M          = 1 
         self.numNodes   = numNodes
         self.inweights  = inweights
         self.outweights = outweights
@@ -191,6 +186,7 @@ class WorkerLP:
     def separate(self, ySol, y, x1Sol, x1, zSol, z): 
         cpx              = self.cpx
         T                = self.T
+        M                = self.M
         numNodes         = self.numNodes
         inweights        = self.inweights
         outweights       = self.outweights
@@ -201,9 +197,9 @@ class WorkerLP:
         S               = len(seed_set)
         senses_subprob  = 'L' * (numNodes + (T-2)*numNodes + (T-1)*numNodes)
         rhs9            = [sum([nw[1] * x1Sol[nw[0]] for nw in inweights[i]]) for i in xrange(numNodes)]
-        rhs10           = [0] * ((T-2)*numNodes)            # rhs of c(10)
-        rhs11           = map(lambda yi: 1-yi, ySol) * (T-1) # rhs of c(11)
-        rhs_subprob     = rhs9 + rhs10 + rhs11              # rhs of constraints
+        rhs10           = [0] * ((T-2)*numNodes)                    # rhs of c(10)
+        rhs11           = map(lambda yi: M*(1-yi), ySol) * (T-1)    # rhs of c(11)
+        rhs_subprob     = rhs9 + rhs10 + rhs11                      # rhs of constraints
         # coefficients
         coefficients9   = map(lambda i: (i, i, 1), xrange(numNodes))
         # c(10)
@@ -228,24 +224,22 @@ class WorkerLP:
         cpx.solve()
       
         # A violated cut is available iff the optimal value is less than zSol
-        print 'Enter workerLP.separate()'
-        print 'subproblem solution status,', cpx.solution.get_status()
         print 'zSol =', zSol[0], 'optimal_value=', cpx.solution.get_objective_value()
-        print seed_set
-        if cpx.solution.get_objective_value() + 1e-03 < zSol[0]:
-            print 'find and add violated cut'
+        print 'seed set: ', seed_set
+        if abs(cpx.solution.get_objective_value() - zSol[0]) > 1e-03:
+            print 'Generating optimality cut'
 
             # create violated cut with dual variables
             # violated cut:
-            # sum(i in V)(sum(t>=2) u(i,t)) * y(i) 
+            # sum(i in V)(sum(t>=2) M * u(i,t)) * y(i) 
             #   - sum(j in V) (sum(i in V) u(i)*w(j,i)) * x1(j) 
-            #   + z <= 0
+            #   + z <= sum(i in V)(sum(t>=2) M * u(i,t))
             # where u is dual variables
-            u = cpx.solution.get_dual_values(range(numNodes))
+            u = cpx.solution.get_dual_values()
             cutVarsList = y + x1 + z
             cutCoefsList = []
             # coefficients for y
-            su = map(lambda i: sum(u[(T-1)*numNodes+i::numNodes]), xrange(numNodes))
+            su = map(lambda i: M*sum(u[(T-1)*numNodes+i::numNodes]), xrange(numNodes))
             cutCoefsList.extend(su)
             # coefficients for x1
             for j in xrange(numNodes):
@@ -258,7 +252,7 @@ class WorkerLP:
             self.cutRhs = sum(su)
 
             violatedCutFound = True
-
+            
         return violatedCutFound
 
 

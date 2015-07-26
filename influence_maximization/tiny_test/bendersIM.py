@@ -97,10 +97,11 @@ class BendersLazyConsCallback(LazyConstraintCallback):
             self.add(constraint = workerLP.cutLhs, sense = "L", rhs = workerLP.cutRhs)
             # force to a fixed solution
             #rows = [[[0], [1]],[[1], [1]], [[6], [1]]]
-            self.add(constraint = cplex.SparsePair(ind = [0], val = [1]), sense = 'E', rhs = 1.0)
-            self.add(constraint = cplex.SparsePair(ind = [1], val = [1]), sense = 'E', rhs = 1.0)
+            #self.add(constraint = cplex.SparsePair(ind = [0], val = [1]), sense = 'E', rhs = 1.0)
+            #self.add(constraint = cplex.SparsePair(ind = [1], val = [1]), sense = 'E', rhs = 1.0)
             #self.add(constraint = cplex.SparsePair(ind = [6], val = [1]), sense = 'E', rhs = 1.0)
         print 'Left lazy constraint callback'
+        print '#############################'
 
 
 # The class BendersUserCutCallback 
