@@ -67,12 +67,9 @@ for i in xrange(5):
 
 
 # calculate expected spread 
-seedSet = ssCplex
-calculate_LT.run(seedSet, S, T, size, source, target, weight)
+calculate_LT.run(ssCplex, S, T, size, source, target, weight)
 print 'seed set selected by Cplex'
-seedSet = sBenders 
-calculate_LT.run(seedSet, S, T, size, source, target, weight)
+calculate_LT.run(sBenders, S, T, size, source, target, weight)
 print 'seed set selected by imcomplete Benders'
-seedSet = ssCplex
-calculate_LT.run(seedSet, S, T, size, source, target, weight)
+calculate_LT.run(ssBenders, S, T, size, source, target, weight)
 print 'seed set selected by EXACT Benders'

@@ -91,8 +91,10 @@ class BendersLazyConsCallback(LazyConstraintCallback):
         print 'Best objective value =', self.get_best_objective_value() 
         print 'Incumbent objective value =', self.get_incumbent_objective_value() 
         # Benders' cut separation
-        if workerLP.separate(ySol, y, x1Sol, x1, zSol, z):
-            self.add(constraint = workerLP.cutLhs, sense = "L", rhs = workerLP.cutRhs)
+        LB = self.get_incumbent_objective_value()
+        if workerLP.separate(ySol, y, x1Sol, x1, zSol, z, LB):
+            for i in xrange(len(workerLP.sense)):
+                self.add(constraint = workerLP.cutLhs[i], sense = workerLP.sense[i], rhs = workerLP.cutRhs[i])
         print 'Left lazy constraint callback'
         print '#############################'
 
@@ -124,7 +126,7 @@ class BendersUserCutCallback(UserCutCallback):
         
         # Benders' cut separation
         if workerLP.separate(ySol, y, x1Sol, x1, zSol, z):
-            self.add(cut = workerLP.cutLhs, sense = "L", rhs = workerLP.cutRhs)
+            self.add(cut = workerLP.cutLhs, sense = workerLP.sense, rhs = workerLP.cutRhs)
       
 
 # This class builds the (primal) worker LP and allows to separate 
@@ -180,10 +182,83 @@ class WorkerLP:
         self.inweights  = inweights
         self.outweights = outweights
 
+    def generate_combinatorial_cut(self, y, ySol, LB):
+        # parameters
+        inweights       = self.inweights
+        T               = self.T
+        numNodes        = len(inweights)
+        obj_subprob_xt  = [1] * ((T+1)*numNodes)
+        ub_xt           = [1] * ((T+1)*numNodes)
+
+        # Set up Cplex instance to solve the worker LP
+        cpx = cplex.Cplex()
+        cpx.set_results_stream(None)
+        cpx.set_log_stream(None) 
+         
+        # Turn off the presolve reductions and set the CPLEX optimizer
+        # to solve the worker LP with primal simplex method.
+        cpx.parameters.preprocessing.reduce.set(0) 
+        cpx.parameters.lpmethod.set(cpx.parameters.lpmethod.values.primal)
+        
+        cpx.objective.set_sense(cpx.objective.sense.maximize)
+        
+        # Create variables 
+        cpx.variables.add(obj = obj_subprob_xt, ub = ub_xt)
+                                                   
+        # This method separates Benders' cuts violated by the current z (and x1) solution.
+        # Violated cuts are found by solving the worker LP
+        
+        # parameters
+        seed_set        = map(lambda yi: yi[0], filter(lambda yi: yi[1] > 1e-03, enumerate(ySol)))
+        S               = len(seed_set)
+        senses_subprob  = 'G' + 'L'*(T*numNodes) + 'E'*(numNodes + T*S)
+        rhsa            = [LB]
+        rhsb            = [0] * (T*numNodes)                    
+        rhsc            = ySol
+        rhsd            = [0] * (T*S)
+        rhs_subprob     = rhsa + rhsb + rhsc + rhsd                    
+        # coefficients
+        coefficientsa   = map(lambda i: (0, i, 1), xrange((T+1)*numNodes))
+        coefficientsb   = []
+        for t in xrange(1, T+1):
+            for i in xrange(numNodes):
+                coefficientsb.extend(map(lambda j_wji: (1 + (t-1)*numNodes + i, (t-1)*numNodes + j_wji[0], -j_wji[1]), inweights[i]))
+                coefficientsb.extend([(1 + (t-1)*numNodes + i, t*numNodes + i, 1)])
+        coefficientsc   = map(lambda i: (1 + T*numNodes + i, i, 1), xrange(numNodes))
+        coefficientsd   = []
+        for t in xrange(1, T+1):
+            coefficientsd.extend(map(lambda si_i: (1 + (T+1)*numNodes +(t-1)*S + si_i[0], t*numNodes + si_i[1], 1), enumerate(seed_set)))
+        # all coefficients
+        coefficients    = coefficientsa + coefficientsb + coefficientsc + coefficientsd
+
+        # Update constraints in the worker LP
+        cpx.linear_constraints.delete()
+        cpx.linear_constraints.add(senses = senses_subprob, rhs = rhs_subprob)
+        cpx.linear_constraints.set_coefficients(coefficients)
+      
+        # Solve the worker LP
+        cpx.solve()
+      
+        # A violated cut is available iff the subproblem is infeasible
+        print cpx.solution.get_status(), cpx.solution.get_status_string(cpx.solution.get_status())
+        print 'seed set: ', seed_set
+        print 'ySol: ', ySol
+        print 'Objective value: ', cpx.solution.get_objective_value(), 'LB: ', LB
+        if cpx.solution.get_status() == 3:
+            print 'Generating combinatorial Benders cut'
+
+            
+            self.cutLhs.append(cplex.SparsePair(ind = xrange(numNodes), val = [1]*numNodes))
+            self.cutRhs.append(1+S)
+            self.sense.append('G')
+
+            combinatorialCutFound = True
+            
+    
     # This method separates Benders' cuts violated by the current z (and x1) solution.
     # Violated cuts are found by solving the worker LP
     #
-    def separate(self, ySol, y, x1Sol, x1, zSol, z): 
+    def separate(self, ySol, y, x1Sol, x1, zSol, z, LB): 
         cpx              = self.cpx
         T                = self.T
         M                = self.M
@@ -191,6 +266,9 @@ class WorkerLP:
         inweights        = self.inweights
         outweights       = self.outweights
         violatedCutFound = False
+        self.cutLhs      = []
+        self.cutRhs      = []
+        self.sense       = []
         
         # parameters
         seed_set        = map(lambda yi: yi[0], filter(lambda yi: yi[1] > 1e-03, enumerate(ySol)))
@@ -223,9 +301,9 @@ class WorkerLP:
         # Solve the worker LP
         cpx.solve()
       
-        # A violated cut is available iff the optimal value is less than zSol
         print 'zSol =', zSol[0], 'optimal_value=', cpx.solution.get_objective_value()
         print 'seed set: ', seed_set
+        print 'Expected spread: ', cpx.solution.get_objective_value() + sum(ySol) + sum(x1Sol), 'LB: ', LB
         if abs(cpx.solution.get_objective_value() - zSol[0]) > 1e-03:
             print 'Generating optimality cut'
 
@@ -248,8 +326,18 @@ class WorkerLP:
             # coefficients for z
             cutCoefsList.append(1)
             
-            self.cutLhs = cplex.SparsePair(ind = cutVarsList, val = cutCoefsList)
-            self.cutRhs = sum(su)
+            self.cutLhs.append(cplex.SparsePair(ind = cutVarsList, val = cutCoefsList))
+            self.cutRhs.append(sum(su))
+            self.sense.append('L')
+
+            violatedCutFound = True
+
+        # A combinatorial cut is considered to be generated if the optimal value equals to zSol
+        # and the bound inquality is violated
+        if cpx.solution.get_objective_value() < LB - sum(ySol) - sum(x1Sol):
+            print 'Bound inequality violated !!!'
+            print 'Generating combinatorial Benders cuts!!!'
+            self.generate_combinatorial_cut(y, ySol, LB)
 
             violatedCutFound = True
             
@@ -409,10 +497,10 @@ def optimize(S, T, sepFracSols, inweights, outweights):
         # solve subproblem again with the optimal master solution
         # this is necessary since the latest subproblem objective value 
         # may not correspond to the optimal master solution
-        workerLP.separate(ySol, y, x1Sol, x1, zSol, z)
-        print 'Objective value of workerLP: ', workerLP.cpx.solution.get_objective_value()
-        print "Influence maximization with Benders' Decomposition with EXACT workerLP:"
-        print 'Expected spread = ', solution.get_objective_value() + workerLP.cpx.solution.get_objective_value() - zSol[0]
+        #workerLP.separate(ySol, y, x1Sol, x1, zSol, z)
+        #print 'Objective value of workerLP: ', workerLP.cpx.solution.get_objective_value()
+        #print "Influence maximization with Benders' Decomposition with EXACT workerLP:"
+        #print 'Expected spread = ', solution.get_objective_value() + workerLP.cpx.solution.get_objective_value() - zSol[0]
     else:
         print "Solution status is not optimal"
     
