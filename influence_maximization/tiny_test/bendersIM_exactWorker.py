@@ -247,7 +247,13 @@ class WorkerLP:
         if cpx.solution.get_status() == 3:
             print 'Generating combinatorial Benders cut'
 
-            
+            cpx.conflict.refine(cpx.conflict.linear_constraints(0, 0, T*numNodes), cpx.conflict.linear_constraints(-1, 1+T*numNodes, T*numNodes+numNodes+T*S), cpx.conflict.upper_bound_constraints(0))    
+            status = cpx.conflict.get()
+            groups = cpx.conflict.get_groups()
+            for i,s in enumerate(status):
+                print i, s, groups[i], cpx.conflict.group_status[s]
+            print 'I am a bug' + 0
+
             self.cutLhs.append(cplex.SparsePair(ind = xrange(numNodes), val = [1]*numNodes))
             self.cutRhs.append(1+S)
             self.sense.append('G')
