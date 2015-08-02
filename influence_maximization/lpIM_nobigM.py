@@ -49,7 +49,7 @@ def set_coefficients():
     im_ub_t.extend([UB] * (N*T))
     im_ub_0.extend([UB] * N)
     im_rhs.extend([0]*(N*T) + [1]*N + [S])
-    im_sense.extend('L' * (N*T + N + 1))
+    im_sense.extend('E' * (N*T) + 'L' * N + 'E')
 
 
 def set_constraint_matrix():
@@ -102,6 +102,7 @@ def optimize(S, T, size, source, target, weight):
     set_constraint_matrix()
     try:
         im_prob = cplex.Cplex()
+        im_prob.parameters.lpmethod.set(im_prob.parameters.lpmethod.values.concurrent)
         handle = populatebynonzero(im_prob)
         im_prob.solve()
     except CplexError, exc:

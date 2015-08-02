@@ -12,8 +12,8 @@ import calculate_LT
 
 
 # paramters of IM
-S = 5
-T = 10
+S = 10
+T = 5
 
 
 fname = '/bkfrat-GraphML/BKFRAB.GraphML' # 'SAMPIN.GraphML'
