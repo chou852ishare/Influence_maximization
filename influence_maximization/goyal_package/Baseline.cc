@@ -101,7 +101,7 @@ void Baseline::mineSeedRand() {
 
     curSeedSet.clear();
     seedsVec.clear();
-    int budget = 50;
+    int budget = strToInt(opt->getValue("budget"));
     //totalCov = 0;
 
     int numUsers = pUsers->size();
@@ -128,7 +128,7 @@ void Baseline::mineSeedHighDeg() {
 
     curSeedSet.clear();
     seedsVec.clear();
-    int budget = 50;
+    int budget = strToInt(opt->getValue("budget"));
     //totalCov = 0;
 
     multimap<int, UID> degQueue;
@@ -328,7 +328,7 @@ void Baseline::mineSeedPR() {
     }
 
     // compute coverage using MC and output to file
-    //writeCovInFile();
+    writeCovInFile();
 }
 
 
@@ -354,8 +354,8 @@ void Baseline::writeCovInFile() {
         //cout << "Seed No. " << S.size() << " " << v << endl;
 		//if (S.size() % 10 != 0) continue;
 //		if (S.size() == 1 || S.size() % 5 == 0) {
-			float cov = 0;
-//            float cov = LTCov(S);
+			//float cov = 0;
+            float cov = LTCov(S);
 		    outFile << S.size() << " " << v << " " << cov << endl;
 	    	cout << S.size() << " " << v << " " << cov << endl;
   //      }

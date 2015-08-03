@@ -99,7 +99,7 @@ float LDAG::mineSeedSet() {
 
 	clearAll();
 
-    const int budget = 50;
+    int budget = strToInt(opt->getValue("budget"));
 	
 	 // needed to implement CELF
 	totalCov = 0;

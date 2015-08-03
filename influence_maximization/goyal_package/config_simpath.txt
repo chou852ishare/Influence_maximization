@@ -3,10 +3,10 @@ probGraphFile : ./hep_LT2.inf
 debug : 0
 mcruns : 10000
 
-outdir : output/test/
+outdir : output/simpath/
 
 startIt : 2
-propModel : LT
+propModel : LTNew
 cutoff : 0.001
 topl : 4
 budget : 50

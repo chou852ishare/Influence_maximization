@@ -1118,7 +1118,7 @@ void MC::writeCovInFile(vector<UID> &seedVec, float tol) {
 		S.insert(v);
 
 		//if (S.size() % 5 != 0) continue;
-		if (S.size() != 50) continue;
+		//if (S.size() != 50) continue;
 		
         float cov = LTCov(S);
 		outFile << S.size() << " " << v << " " << cov << endl;

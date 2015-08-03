@@ -15,7 +15,7 @@ using namespace _LTSimplePath;
 
 class InfluenceModels {
 	
-	int pi, debug;
+	int pi, debug, budget;
 	unsigned int maxTuples;
 
 		// Data Structures

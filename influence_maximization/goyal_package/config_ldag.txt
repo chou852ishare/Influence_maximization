@@ -3,7 +3,7 @@ probGraphFile : ./hep_LT2.inf
 debug : 0
 mcruns : 10000
 
-outdir : output/test/
+outdir : output/ldag/
 
 startIt : 2
 propModel : LT
@@ -19,4 +19,4 @@ tol_ldag : 0.003125
 # 15 : LDAG
 # 17 : Simple Path 
 # 20 : Baseline (Rand, HighDeg, PageRank, etc...)
-phase : 17
+phase : 15

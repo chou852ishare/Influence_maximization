@@ -137,11 +137,12 @@ AnyOption* InfluenceModels::readOptions(int argc, char* argv[] )
 	opt->processCommandArgs( argc, argv );
 
 	phase = strToInt(opt->getValue("phase"));
-
-
+	budget = strToInt(opt->getValue("budget"));
 	outdir = opt->getValue("outdir");
 
 	cout << "debug flag = " << debug << endl;
+	cout << "phase = " << phase << endl;
+	cout << "budget = " << budget << endl;
 	cout << "output directory: " << outdir << endl;
 	cout << endl << endl;
 	return opt;
