@@ -105,9 +105,8 @@ def populatebynonzero(prob):
 
 def run(seedSet, S, T, size, source, target, weight):
     print '********************************************************************************************'
-    print 'calculate expected spread'
-    print 'seed set:', seedSet
     print 'calculate expected spread with fixed seed set'
+    print 'seed set:', seedSet
     set_ST(S, T)
     set_network(size, source, target, weight)
     set_coefficients()
@@ -132,7 +131,12 @@ def run(seedSet, S, T, size, source, target, weight):
         print exc
         return
     print "expected spread  = ", im_prob.solution.get_objective_value()
-    x  = im_prob.solution.get_values(range(size))
-    ss = filter(lambda xi: xi[1] > 1e-03, enumerate(x))
-    print "seed set = ", ss
+    x = im_prob.solution.get_values()
+    x = np.reshape(x, (T+1, N))
 
+    # get delta influence
+    deltaInf = []
+    for xt in x:
+        deltaInf.append(sum(xt))
+
+    return deltaInf

@@ -4,7 +4,7 @@ import numpy as np
 import cplex
 from cplex.exceptions import CplexError
 import sys
-
+import os
 
 # parameters
 # constants
@@ -96,6 +96,7 @@ def populatebynonzero(prob):
 def optimize(S, T, size, source, target, weight):
     print '******************************************************************************************'
     print 'Solve the LP relaxation directly'
+    
     set_ST(S, T)
     set_network(size, source, target, weight)
     set_coefficients()
@@ -108,21 +109,29 @@ def optimize(S, T, size, source, target, weight):
     except CplexError, exc:
         print exc
         return
+
     print
     print '**********************************'
     # solution.get_status() returns an integer code
     print "Solution status = " , im_prob.solution.get_status(), ":",
     # the following line prints the corresponding string
     print im_prob.solution.status[im_prob.solution.get_status()]
-    print "Solution value  = ", im_prob.solution.get_objective_value()
+    obj_value = im_prob.solution.get_objective_value()
+    print "Solution value  = ", obj_value
     x     = im_prob.solution.get_values()
     x     = np.reshape(x, (T+1, N))
-    #print "Solution variables = ", x
-    print reduce(lambda x1, x2: x1+x2, x)
+
+    # get delta influence
+    deltaInf = []
+    for xt in x:
+        deltaInf.append(sum(xt))
+    
+    # get seedset
     seedSet = []
+    probSet  = []
     for i,sol in enumerate(x[0]):
         if sol > 1e-03:
-            print i, sol 
             seedSet.append(i)
+            probSet.append(sol)
     
-    return seedSet
+    return seedSet, probSet, deltaInf

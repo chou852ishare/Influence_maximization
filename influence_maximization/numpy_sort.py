@@ -10,7 +10,6 @@ def load_graph(netname):
 def process_i(i, step, nw, g):
     for v in g.vs[i::step]:
         nw.append((v.index, sum(g.es(_source = v.index)['normalized inweight'])))
-    print 'subprocess %s done' % i
 
 def gen_outweight_seq(g):
     t0 = datetime.now()
@@ -37,12 +36,13 @@ def sort_owseq(owseq, S):
     print 'seed set selected by max weighted degree: ', ss
     print 'influence spread: ', reduce(lambda x,y: (0, x[1]+y[1]), ss)[1] + S
     print 'Sort time: ', (t2-t1).seconds
-    return ss
+    return map(lambda s: s[0], ss)
 
 def run(netname, S):
     g       = load_graph(netname)
     owseq   = gen_outweight_seq(g)
-    ss      = sort_owseq(owseq, S)
+    seedSet = sort_owseq(owseq, S)
+    return seedSet
 
 
 if __name__ == '__main__':
