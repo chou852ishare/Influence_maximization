@@ -99,11 +99,38 @@ def get_result_lp(g, size, source, target, weight):
     write_result(netname, 'maxlp', dInf, ssMaxlp_name, (t_end1 - t_start).seconds)
 
 
-def get_result_mip(size, source, target, weight):
+def get_result_mip(g, size, source, target, weight):
     # influence maximization - original MIP
-    ssMip      = mipIM_nobigM.optimize(S, T, size, source, target, weight)
-    ssMip_name = map(lambda s: g.vs[s]['name'], ssMip)
-    return ssMip, ssMip_name
+    t_start         = datetime.now()
+    ssMip, dInf     = mipIM_nobigM.optimize(S, T, size, source, target, weight)
+    ssMip_name      = map(lambda s: g.vs[s]['name'], ssMip)
+    t_end           = datetime.now()
+    write_result(netname, 'mip', dInf, ssMip_name, (t_end - t_start).seconds)
+
+
+def gen_ioweight(g):
+    # influence maximization - approximate benders
+    # form of inweights (example):
+    # node  [(in-node1, in-weight1) (in-node2, in-weight2) ...]
+    # 0     [(1,0.3) (3,0.4) (7,0.9) ...]
+    # 1     [(2,0.2) (6,0.2) (8,0.1) ...]
+    # 2     [(1,0.3) (3,0.4) ...]
+    # ...
+    inweights  = []
+    outweights = []
+    for v in g.vs:
+        inweights.append([(e.source, e['normalized inweight']) for e in g.es(_target = v.index)])
+        outweights.append([(e.target, e['normalized inweight']) for e in g.es(_source = v.index)])
+    return inweights, outweights
+
+
+def get_result_benders(size, source, target, weight, sepflag, inweights, outweights):
+    t_start         = datetime.now()
+    ssBenders       = bendersIM.optimize(S, T, sepflag, inweights, outweights)
+    ssBenders_name  = map(lambda s: g.vs[s]['name'], ssBenders)
+    t_end           = datetime.now()
+    dInf            = calculate_spread(ssBenders, size, source, target, weight)
+    write_result(netname, 'benders', dInf, ssBenders_name, (t_end - t_start).seconds)
 
 
 def get_result_base():
@@ -121,14 +148,36 @@ def calculate_spread(ss, size, source, target, weight):
 
 
 def run_lp():
-    print 'Selecte seed set by LP relaxation'
-    set_ST(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3])
+    print 'Selecte seed set by LP-relaxation'
     pname = gen_graph()
     g, size, source, target, weight = load_graph(pname)
     get_result_lp(g, size, source, target, weight)
     print 'Done! seed set selected by LP-relaxation and MAX-LP'
 
 
+def run_mip():
+    print 'Selecte seed set by original-MIP'
+    pname = gen_graph()
+    g, size, source, target, weight = load_graph(pname)
+    get_result_mip(g, size, source, target, weight)
+    print 'Done! seed set selected by original-MIP'
+
+
+def run_benders():
+    print 'Selecte seed set by approx-Benders'
+    pname = gen_graph()
+    g, size, source, target, weight = load_graph(pname)
+    inweights, outweights = gen_ioweight(g)
+    sepflag = 0
+    get_result_benders(size, source, target, weight, sepflag, inweights, outweights)
+    print 'Done! seed set selected by approx-Benders'
+
+
 if __name__ == '__main__':
+    set_ST(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3])
     if sys.argv[4] == 'lp':
         run_lp()
+    elif sys.argv[4] == 'mip':
+        run_mip()
+    elif sys.argv[4] == 'benders':
+        run_benders()
