@@ -1,4 +1,5 @@
 from datetime import datetime
+from multiprocessing import Manager, Pool
 import numpy as np
 import cPickle as pickle
 import os
@@ -108,6 +109,13 @@ def get_result_mip(g, size, source, target, weight):
     write_result(netname, 'mip', dInf, ssMip_name, (t_end - t_start).seconds)
 
 
+def process_i(i, g, inweights, outweights, numprocess):
+    for i in xrange(i, len(g.vs), numprocess):
+        v             = g.vs[i]
+        inweights[i]  = [(e.source, e['normalized inweight']) for e in g.es(_target = v.index)]
+        outweights[i] = [(e.target, e['normalized inweight']) for e in g.es(_source = v.index)]
+    
+
 def gen_ioweight(g):
     # influence maximization - approximate benders
     # form of inweights (example):
@@ -116,15 +124,22 @@ def gen_ioweight(g):
     # 1     [(2,0.2) (6,0.2) (8,0.1) ...]
     # 2     [(1,0.3) (3,0.4) ...]
     # ...
-    inweights  = []
-    outweights = []
-    for v in g.vs:
-        inweights.append([(e.source, e['normalized inweight']) for e in g.es(_target = v.index)])
-        outweights.append([(e.target, e['normalized inweight']) for e in g.es(_source = v.index)])
+    print 'Start... Generating in/out-weights'
+    manager     = Manager()
+    inweights   = manager.list(range(len(g.vs)))
+    outweights  = manager.list(range(len(g.vs)))
+    numprocess  = 20
+    pool        = Pool(numprocess)
+    for i in xrange(numprocess):
+        pool.apply_async(process_i, args=(i, g, inweights, outweights, numprocess))
+    pool.close()
+    pool.join()
+    print 'Done! Generating in/out-weights'
+    print inweights[:3]
     return inweights, outweights
 
 
-def get_result_benders(size, source, target, weight, sepflag, inweights, outweights):
+def get_result_benders(g, size, source, target, weight, sepflag, inweights, outweights):
     t_start         = datetime.now()
     ssBenders       = bendersIM.optimize(S, T, sepflag, inweights, outweights)
     ssBenders_name  = map(lambda s: g.vs[s]['name'], ssBenders)
@@ -135,7 +150,6 @@ def get_result_benders(size, source, target, weight, sepflag, inweights, outweig
 
 def get_result_base():
     # sort nodes by sum(out-weight)
-    print '*********************************************************************************************'
     print 'Baseline (max out-weights)'
     ssMW      = numpy_sort.run(netname, S)
     ssMW_name = map(lambda s: g.vs[s]['name'], ssMW)
@@ -169,7 +183,7 @@ def run_benders():
     g, size, source, target, weight = load_graph(pname)
     inweights, outweights = gen_ioweight(g)
     sepflag = 0
-    get_result_benders(size, source, target, weight, sepflag, inweights, outweights)
+    get_result_benders(g, size, source, target, weight, sepflag, inweights, outweights)
     print 'Done! seed set selected by approx-Benders'
 
 

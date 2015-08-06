@@ -86,22 +86,10 @@ class BendersLazyConsCallback(LazyConstraintCallback):
         ySol    = self.get_values(y)
         x1Sol   = self.get_values(x1) 
         zSol    = self.get_values(z)
-        print 'Enter lazy constraint callback'
-        print 'lazy constraint, y =', filter(lambda yi: yi[1] > 1e-03, enumerate(ySol))
-        print 'lazy constraint, sum(x1) =', sum(x1Sol)
-        print 'lazy constraint, z =', zSol
-        print 'lazy constraint, sum(y,x1,z) =', sum(ySol)+sum(x1Sol)+sum(zSol)
          
         # Benders' cut separation
         if workerLP.separate(ySol, y, x1Sol, x1, zSol, z):
             self.add(constraint = workerLP.cutLhs, sense = "L", rhs = workerLP.cutRhs)
-            # force to a fixed solution
-            #rows = [[[0], [1]],[[1], [1]], [[6], [1]]]
-            #self.add(constraint = cplex.SparsePair(ind = [0], val = [1]), sense = 'E', rhs = 1.0)
-            #self.add(constraint = cplex.SparsePair(ind = [1], val = [1]), sense = 'E', rhs = 1.0)
-            #self.add(constraint = cplex.SparsePair(ind = [6], val = [1]), sense = 'E', rhs = 1.0)
-        print 'Left lazy constraint callback'
-        print '#############################'
 
 
 # The class BendersUserCutCallback 
@@ -123,11 +111,6 @@ class BendersUserCutCallback(UserCutCallback):
         ySol    = self.get_values(y)
         x1Sol   = self.get_values(x1) 
         zSol    = self.get_values(z)
-        print 'Enter user cut callback'
-        print 'user cut, y =', filter(lambda yi: yi[1] > 1e-03, enumerate(ySol))
-        print 'user cut, sum(x1) =', sum(x1Sol)
-        print 'user cut, z =', zSol
-        print 'user cut, sum(y,x1,z) =', sum(ySol)+sum(x1Sol)+sum(zSol)
         
         # Benders' cut separation
         if workerLP.separate(ySol, y, x1Sol, x1, zSol, z):
@@ -229,12 +212,7 @@ class WorkerLP:
         cpx.solve()
       
         # A violated cut is available iff the optimal value is less than zSol
-        print 'Enter workerLP.separate()'
-        print 'subproblem solution status,', cpx.solution.get_status()
-        print 'zSol =', zSol[0], 'optimal_value=', cpx.solution.get_objective_value()
-        print seed_set
         if cpx.solution.get_objective_value() + 1e-03 < zSol[0]:
-            print 'find and add violated cut'
 
             # create violated cut with dual variables
             # violated cut:
@@ -328,13 +306,10 @@ def createMasterILP(cpx, S, y, x1, z, inweights):
     # define constraints
     cpx.linear_constraints.add(senses = master_sense, rhs = master_rhs)
     cpx.linear_constraints.set_coefficients(coefficients)
-    # force to a fixed solution
-    #rows = [[[1], [1]], [[3], [1]], [[5], [1]], [[6], [1]]]
-    #cpx.linear_constraints.add(lin_expr = rows, senses = 'E'*len(rows), rhs = [1.0]*len(rows))
 
 
 def optimize(S, T, sepFracSols, inweights, outweights):
-    print '*****************************************************************************************'
+    print '****************************************************************************************'
     print 'Solve the MIP problem using Benders Decomposition'
     try:
         print "Benders' cuts separated to cut off: " , 
@@ -390,7 +365,6 @@ def optimize(S, T, sepFracSols, inweights, outweights):
         
     solution = cpx.solution
     print
-    print "Default epgap: ", cpx.parameters.mip.tolerances.mipgap.get()
     print "Solution status: " , solution.get_status(), solution.get_status_string(solution.get_status())
     print "Objective value: " , solution.get_objective_value()
         
@@ -406,13 +380,10 @@ def optimize(S, T, sepFracSols, inweights, outweights):
             if sol > 1e-03:
                 print i, sol 
                 seedSet.append(i)
-        print 'zSol:'
-        print 2*numNodes, zSol[0]
         # solve subproblem again with the optimal master solution
         # this is necessary since the latest subproblem objective value 
         # may not correspond to the optimal master solution
         workerLP.separate(ySol, y, x1Sol, x1, zSol, z)
-        print 'Objective value of workerLP: ', workerLP.cpx.solution.get_objective_value()
         print "Influence maximization with Benders' Decomposition:"
         print 'Expected spread = ', solution.get_objective_value() + workerLP.cpx.solution.get_objective_value() - zSol[0]
     else:
