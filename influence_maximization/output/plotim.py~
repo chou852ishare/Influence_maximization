@@ -1,0 +1,97 @@
+import numpy as np
+from pylab import *
+
+
+algo = {'lp':       'EXACT-LPR',
+        'maxlp':    'HIGHPROB-LPR',
+        }
+linestype = {'lp':    'ro-',
+             'maxlp': 'bs-',
+             }
+
+
+def get_data(filename, addzero = True):
+    # processing data
+    data = np.genfromtxt(filename)
+    data = data.reshape(data.size,)
+    if addzero:
+        x = np.concatenate([[0], data[0::2]])
+        y = np.concatenate([[0], data[1::2]])
+    else:
+        x = data[0::2]
+        y = data[1::2]
+    return x, y
+
+
+def fig_init():
+    # set plot params
+    fig = figure(figsize=(12.0, 8.0)) # in inches!
+    rcParams.update({'font.size':24})
+    rcParams.update({'axes.linewidth':3})
+    rcParams.update({'xtick.major.size':8})
+    rcParams.update({'xtick.major.width':3})
+    rcParams.update({'ytick.major.size':8})
+    rcParams.update({'ytick.major.width':3})
+    rcParams.update({'lines.linewidth':3})
+    rcParams.update({'lines.markersize':8})
+    return fig
+
+
+def plot_spread(netname, methods):
+    # set plot params
+    fig = fig_init()
+    # plot for each method
+    for method in methods:
+        filename = './%s/%s_%s.spread' % (netname, netname, method)
+        # processing data
+        seed_size, infl_sprd = get_data(filename)
+        # plot spread
+        plot(seed_size, infl_sprd, linestype[method])
+    legend([algo[m] for m in methods], loc='best')
+    xlabel('Number of Seeds')
+    ylabel('Expected Influence Spread')
+    xticks(range(5,51,5))
+    #yticks(range(3000,12000,2000))
+    savefig('./figs/spread_%s_%s.pdf' % (netname, method))
+    show()
+
+
+def plot_running_time(netname, methods):
+    # set plot params
+    fig = fig_init()
+    # plot for each method
+    for method in methods:
+        filename = './%s/%s_%s.runtime' % (netname, netname, method)
+        # processing data
+        seed_size, runn_time = get_data(filename, addzero=False)
+        # plot running time
+        plot(seed_size, runn_time, linestype[method])
+    yscale('log')
+    legend([algo[m] for m in methods], loc='best')
+    xlabel('Number of Seeds')
+    ylabel('Running Time (min)')
+    xticks(range(5,51,5))
+    #yticks(range(0,200,50))
+    ylim(ymin = .1)
+    savefig('./figs/runningtime_%s_%s.pdf' % (netname, method))
+    show()
+
+
+def plot_deltainf(netname, methods):
+    # set plot params
+    fig = fig_init()
+    # plot for each method
+    for method in methods:
+        filename = './%s/%s_%s.deltainf' % (netname, netname, method)
+        # processing data
+        T = np.array(range(0,10))
+        deltainf = np.genfromtxt(filename) 
+        # plot spread
+        plot(T, deltainf, linestype[method])
+    legend([algo[m] for m in methods], loc='best')
+    xlabel('Time Step')
+    ylabel('Delta Influence')
+    #yticks(range(0,200,50))
+    ylim(ymin = 0)
+    savefig('./figs/deltainf_%s_%s.pdf' % (netname, method))
+    show()
