@@ -162,10 +162,10 @@ void MC::computeCov() {
 
         //outFile <<
         //cout <<
-		//cout << "(CovNew, Cov): " << covNew << ", " << cov << endl;
+		cout << "(CovNew, Cov): " << covNew << ", " << cov << endl;
 	}
 
-	//cout << "Coverage achieved: " << cov << endl;
+	cout << "Coverage achieved: " << cov << endl;
 
 	//outFile << cov << endl;
 

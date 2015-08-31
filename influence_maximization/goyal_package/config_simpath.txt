@@ -1,4 +1,4 @@
-probGraphFile : ./hep_LT2.inf
+probGraphFile : ./heplt2.inf
 
 debug : 0
 mcruns : 10000
