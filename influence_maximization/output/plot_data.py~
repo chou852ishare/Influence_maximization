@@ -1,0 +1,56 @@
+import numpy as np
+import subprocess as sp
+import plotim
+
+
+def prepare_running_time(netname, T, method):
+    timef  = open('./%s/%s_%s.runtime' % (netname, netname, method), 'w')
+    for S in xrange(5,51,5):
+        fi = open('./%s/%s_%s_%s_%s.seedset' % (netname, netname, S, T, method))    
+        tm = int(fi.readlines()[-1].replace('\n','').split(' ')[1]) / 60  # unit minute
+        print >> timef, S, tm
+    return timef.name
+
+
+def prepare_delta_influence(netname, S, T, method):
+    deltaf = open('./%s/%s_%s.deltainf' % (netname, netname, method), 'w')
+    f = open('./%s/%s_%s_%s_%s.deltaInf' % (netname, netname, S, T, method))
+    deltaf.writelines(f.readlines())
+    deltaf.close()
+    f.close()
+    return deltaf.name
+
+
+def prepare_spread(netname, T, method):
+    spreadf = open('./%s/%s_%s.spread' % (netname, netname, method), 'w')
+    for S in xrange(5,51,5):
+        fi = open('./%s/%s_%s_%s_%s.seedset' % (netname, netname, S, T, method))    
+        sd = fi.readlines()[-1].replace('\n','').split(' ')[2]
+        print >> spreadf, S, sd
+    return spreadf.name
+
+
+def plt(net, methods, T):
+    for method in methods:
+        # plot running time against seed set size
+        timef = prepare_running_time(net, T, method)
+    #plotim.plot_running_time(net, methods)
+   
+    for method in methods:
+        # plot influence spread against seed set size
+        spreadf = prepare_spread(net, T, method)
+    #plotim.plot_spread(net, methods)
+    
+    for S in range(5,51,5):
+        for method in methods:
+        # plot delta influence against time step
+            deltaf = prepare_delta_influence(net, S, T, method)
+        plotim.plot_deltainf(net, methods)
+
+
+if __name__ == '__main__':
+    netname = ['heplt2', 'epinions']
+    methods = ['lp', 'maxlp']
+    T = 9
+    for net in netname:
+        plt(net, methods, T)
