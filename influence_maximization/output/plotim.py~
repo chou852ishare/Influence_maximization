@@ -4,9 +4,21 @@ from pylab import *
 
 algo = {'lp':       'EXACT-LPR',
         'maxlp':    'HIGHPROB-LPR',
+        'benders':  'APPROX-BENDERS',
+        'degree':   'MAX-DEGREE',
+        'weight':   'HIGHPROB-DEGREE',
+        'ldag':     'LDAG',
+        'greedy':   'GREEDY',
+        'simpath':  'SIMPATH',
         }
-linestype = {'lp':    'ro-',
-             'maxlp': 'bs-',
+linestype = {'lp':      'ro-',
+             'maxlp':   'bs-',
+             'benders': 'gd-',
+             'degree':  'c+-',
+        'weight':   'm8-',
+        'ldag':     'yp-',
+        'greedy':   'k1-',
+        'simpath':  'w*-',
              }
 
 

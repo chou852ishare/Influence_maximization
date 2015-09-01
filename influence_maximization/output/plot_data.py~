@@ -34,23 +34,23 @@ def plt(net, methods, T):
     for method in methods:
         # plot running time against seed set size
         timef = prepare_running_time(net, T, method)
-    #plotim.plot_running_time(net, methods)
+    plotim.plot_running_time(net, methods)
    
     for method in methods:
         # plot influence spread against seed set size
         spreadf = prepare_spread(net, T, method)
-    #plotim.plot_spread(net, methods)
+    plotim.plot_spread(net, methods)
     
     for S in range(5,51,5):
         for method in methods:
         # plot delta influence against time step
             deltaf = prepare_delta_influence(net, S, T, method)
-        plotim.plot_deltainf(net, methods)
+    #    plotim.plot_deltainf(net, methods)
 
 
 if __name__ == '__main__':
-    netname = ['heplt2', 'epinions']
-    methods = ['lp', 'maxlp']
+    netname = ['epinions']
+    methods = ['lp', 'maxlp', 'benders']
     T = 9
     for net in netname:
         plt(net, methods, T)
