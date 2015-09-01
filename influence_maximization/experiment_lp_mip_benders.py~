@@ -165,6 +165,16 @@ def get_result_base(g, size, source, target, weight):
     write_result(netname, 'weight', dInf, ssMW_name, (t_end - t_start).seconds)
 
 
+def get_result_fixed(g, size, source, target, weight):
+    # sort nodes by sum(out-weight)
+    t_start   = datetime.now()
+    ssMW      = numpy_sort.run(netname, S)
+    ssMW_name = map(lambda s: g.vs[s]['name'], ssMW)
+    t_end     = datetime.now()
+    dInf      = calculate_spread(ssMW, size, source, target, weight)
+    write_result(netname, 'weight', dInf, ssMW_name, (t_end - t_start).seconds)
+
+
 def calculate_spread(ss, size, source, target, weight):
     # calculate expected spread
     return calculate_LT.run(ss, S, T, size, source, target, weight)
@@ -194,6 +204,14 @@ def run_weight():
     print 'Done! seed set selected by MAX-weighted-degree'
 
 
+def run_fix():
+    print 'calculate fixed seed set by cplex'
+    pname = gen_graph()
+    g, size, source, target, weight = load_graph(pname)
+    get_result_base(g, size, source, target, weight)
+    print 'Done! seed set selected by MAX-weighted-degree'
+
+
 def run_benders(netname):
     print 'Selecte seed set by approx-Benders'
     pname = gen_graph()
@@ -212,5 +230,5 @@ if __name__ == '__main__':
         run_mip()
     elif sys.argv[4] == 'benders':
         run_benders(netname)
-    elif sys.argv[4] == 'weight':
-        run_weight()
+    elif sys.argv[4] == 'fix':
+        run_fix()
