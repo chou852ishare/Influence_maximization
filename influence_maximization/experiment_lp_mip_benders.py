@@ -19,12 +19,13 @@ import ncol
 import numpy_sort
 
 
-def set_ST(s, t, net):
+def set_ST(s, t, net, mth):
     # paramters of IM
-    global S, T, netname
+    global S, T, netname, method
     S = s
     T = t
     netname = net
+    method  = mth
 
 
 def gen_graph():
@@ -204,13 +205,42 @@ def run_benders(netname):
     print 'Done! seed set selected by approx-Benders'
 
 
+def get_result_fix(g, size, source, target, weight, ssfile):
+    # calculate spread of fixed seed set
+    t_start   = datetime.now()
+    seeds     = ssfile.readlines()
+    ssFX_name = map(lambda s: s.split(' ')[0].replace('\n', ''), seeds)
+    ssFX      = map(lambda sn: g.vs(name_eq=sn)[0].index, ssFX_name)
+    t_end     = datetime.now()
+    dInf      = calculate_spread(ssFX, size, source, target, weight)
+    write_result(netname, method, dInf, ssFX_name, (t_end - t_start).seconds)
+
+
+def run_fix(ssfile):
+    print 'calculate spread of fixed seed set'
+    pname = gen_graph()
+    g, size, source, target, weight = load_graph(pname)
+    get_result_fix(g, size, source, target, weight, ssfile)
+    print 'Done! calculate spread of fixed seed set'
+
+
 if __name__ == '__main__':
-    set_ST(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3])
-    if sys.argv[4] == 'lp':
+    set_ST(int(sys.argv[1]), int(sys.argv[2]), sys.argv[3], sys.argv[4])
+    if sys.argv[4] == 'greedy':
+        ssfile = open('./goyal_package/output/%s/%s_%s_0_%s/LT_Greedy.txt' % (netname, netname, S, method))
+        run_fix(ssfile)
+    elif sys.argv[4] == 'simpath':
+        ssfile = open('./goyal_package/output/%s/%s_%s_0_%s/LTNew_SimPath_4_0.001.txt' % (netname, netname, S, method))
+        run_fix(ssfile)
+    elif sys.argv[4] == 'ldag':
+        ssfile = open('./goyal_package/output/%s/%s_%s_0_%s/ldag_0.003125.txt' % (netname, netname, S, method))
+        run_fix(ssfile)
+    elif sys.argv[4] == 'maxweight':
+        ssfile = open('./output/%s/%s_%s_1_maxlp.seedset' % (netname, netname, S))
+        run_fix(ssfile)
+    elif sys.argv[4] == 'lp':
         run_lp()
     elif sys.argv[4] == 'mip':
         run_mip()
     elif sys.argv[4] == 'benders':
         run_benders(netname)
-    elif sys.argv[4] == 'weight':
-        run_weight()

@@ -1,7 +1,9 @@
 #!/bin/bash
 
-for S in $(seq 5 5 50); do
-    for T in $(seq 3 2 10); do
-        nohup python experiment_lp_mip_benders.py ${S} ${T} epinions benders & # benders lp mip
+n=epinions
+m=maxweight
+for S in $(seq 15 5 50); do
+    for T in $(seq 1 2 7); do
+        python experiment_lp_mip_benders.py ${S} ${T} ${n} ${m}
     done
 done
