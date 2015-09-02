@@ -31,10 +31,10 @@ def prepare_spread(netname, T, method):
 
 
 def plt(net, methods, T):
-    #for method in methods:
+    for method in methods:
         # plot running time against seed set size
-    #    timef = prepare_running_time(net, T, method)
-    #plotim.plot_running_time(net, methods)
+        timef = prepare_running_time(net, T, method)
+    plotim.plot_running_time(net, methods)
    
     for method in methods:
         # plot influence spread against seed set size
@@ -52,5 +52,7 @@ if __name__ == '__main__':
     netname = ['heplt2', 'epinions']
     methods = ['lp', 'maxlp', 'benders', 'maxweight', 'simpath', 'ldag', 'greedy']
     T = 3
+    netname = ['pwh']
+    methods = ['lp', 'maxlp']
     for net in netname:
         plt(net, methods, T)

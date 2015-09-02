@@ -64,6 +64,8 @@ def plot_spread(netname, methods):
     ylabel('Expected Influence Spread')
     xticks(range(5,51,5))
     #yticks(range(3000,12000,2000))
+    xlim(xmax = 25)
+    ylim(ymin = 0, ymax = 75)
     savefig('./figs/spread_%s_%s.pdf' % (netname, method))
     show()
 
@@ -84,7 +86,8 @@ def plot_running_time(netname, methods):
     ylabel('Running Time (min)')
     xticks(range(5,51,5))
     #yticks(range(0,200,50))
-    ylim(ymin = 1)
+    xlim(xmax = 25)
+    ylim(ymin = .1)
     savefig('./figs/runningtime_%s_%s.pdf' % (netname, method))
     show()
 
@@ -110,10 +113,9 @@ def plot_deltainf(netname, methods):
 
 
 if __name__ == '__main__':
-    netname = ['heplt2', 'epinions']
-    methods = ['lp', 'maxlp', 'benders', 'maxweight']
-    #for net in netname:
-    #    plot_running_time(net, methods)
-    methods = ['lp', 'maxlp', 'benders', 'maxweight', 'simpath', 'ldag', 'greedy']
+    netname = ['pwh']
+    methods = ['lp', 'maxlp']
+    for net in netname:
+        plot_running_time(net, methods)
     for net in netname:
         plot_spread(net, methods)
