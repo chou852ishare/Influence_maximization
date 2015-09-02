@@ -71,7 +71,7 @@ def preprocess(fname):
     g = read_graph(gfile)
     make_simple(g)
     normalize_inweight(g)
-    break_cycle(g)
+    #break_cycle(g)
     return g
 
 
