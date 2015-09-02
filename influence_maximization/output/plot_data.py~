@@ -50,7 +50,7 @@ def plt(net, methods, T):
 
 if __name__ == '__main__':
     netname = ['heplt2', 'epinions']
-    methods = ['lp', 'maxlp', 'benders', 'maxweight', 'simpath', 'ldag', 'greedy']
+    methods = ['lp', 'maxlp', 'benders', 'maxweight', 'simpath']
     T = 3
     for net in netname:
         plt(net, methods, T)

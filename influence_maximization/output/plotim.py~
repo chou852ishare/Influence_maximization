@@ -59,7 +59,7 @@ def plot_spread(netname, methods):
         seed_size, infl_sprd = get_data(filename)
         # plot spread
         plot(seed_size, infl_sprd, linestype[method])
-    legend([algo[m] for m in methods], loc='best', fontsize=22)
+    legend([algo[m] for m in methods], loc='best', fontsize=20)
     xlabel('Number of Seeds')
     ylabel('Expected Influence Spread')
     xticks(range(5,51,5))
