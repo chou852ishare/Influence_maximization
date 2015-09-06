@@ -61,11 +61,11 @@ def plot_spread(netname, methods):
         plot(seed_size, infl_sprd, linestype[method])
     legend([algo[m] for m in methods], loc='best', fontsize=22)
     xlabel('Number of Seeds')
-    ylabel('Expected Influence Spread')
+    ylabel('Percentage of Active Nodes (%)')
     xticks(range(5,51,5))
-    #yticks(range(3000,12000,2000))
+    yticks(range(0,56,11), [0, 20, 40, 60, 80, 100])
     xlim(xmax = 25)
-    ylim(ymin = 0, ymax = 75)
+    ylim(ymin = 0, ymax = 60)
     savefig('./figs/spread_%s_%s.pdf' % (netname, method))
     show()
 
@@ -103,7 +103,6 @@ def plot_deltainf(netname, methods):
         deltainf = np.genfromtxt(filename) 
         # plot spread
         plot(T, deltainf, linestype[method])
-    legend([algo[m] for m in methods], loc='best')
     xlabel('Time Step')
     ylabel('Delta Influence')
     #yticks(range(0,200,50))
@@ -114,8 +113,13 @@ def plot_deltainf(netname, methods):
 
 if __name__ == '__main__':
     netname = ['pwh']
-    methods = ['lp', 'maxlp']
+    methods = ['lp', 'maxlp', 'benders', 'maxweight']
+    #for net in netname:
+    #    plot_running_time(net, methods)
+    #methods = ['lp', 'maxlp', 'benders', 'maxweight', 'simpath', 'ldag', 'greedy']
+    #for net in netname:
+    #    plot_spread(net, methods)
+    netname = ['pwh', 'heplt2', 'epinions']
+    methods = ['maxlp']
     for net in netname:
-        plot_running_time(net, methods)
-    for net in netname:
-        plot_spread(net, methods)
+        plot_deltainf(net, methods)

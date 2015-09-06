@@ -1,6 +1,6 @@
 from igraph import *
 
-g = load('heplt2-GraphML/heplt2.GraphML')
+g = load('epinions-GraphML/epinions.ncol')
 
 print '# of nodes: ', len(g.vs)
 print '# of edges: ', len(g.es)
